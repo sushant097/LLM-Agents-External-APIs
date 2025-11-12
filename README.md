@@ -85,6 +85,8 @@ LLM (Gemini / Ollama)
 
 ## ⚙️ Project Structure
 
+*will change later*
+
 ```
 LLM-Agents-External-APIs/
 ├── agent.py                # Main entrypoint (agent loop)
