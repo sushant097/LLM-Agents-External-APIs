@@ -25,25 +25,21 @@ persona:
   behavior_tags: [rational, focused, tool-using]
 
 servers:
-  - name: playground
-    transport: stdio
-    path: modules/servers/mcp_server_1.py
-
-  - name: rag
-    transport: stdio
-    path: modules/servers/mcp_server_2.py
-
-  - name: web
-    transport: stdio
-    path: modules/servers/mcp_server_3.py
-
+  - name: math
+    script: mcp_server_1.py
+    cwd: mcp_server_1.py
+  - name: documents
+    script: mcp_server_2.py
+    cwd: mcp_server_2.py
+  - name: websearch
+    script: mcp_server_3.py
+    cwd: mcp_server_3.py
   - name: gsuite
-    transport: sse
-    base_url: "http://127.0.0.1:8088"
-    tools:
-      - create_sheet
-      - append_rows
-      - send_email
+    script: mcp_server_gsuite.py
+    cwd: mcp_server_gsuite.py
+  - name: telegram
+    script: mcp_server_telegram.py
+    cwd: mcp_server_telegram.py
 
 
 
