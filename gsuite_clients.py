@@ -1,23 +1,35 @@
 # gsuite_clients.py
+"""
+Helpers for Google Sheets + Gmail.
+
+Uses a Service Account JSON file pointed to by:
+  GOOGLE_SERVICE_ACCOUNT_FILE=/absolute/path/to/service_account.json
+
+Sheets:
+  - create_or_replace_sheet(title, header, rows)
+
+Gmail:
+  - send_email_with_sheet_link(to_email, subject, sheet_url, message)
+"""
+
 import os
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-# Scopes
 SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
-SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "service_account.json")
-GMAIL_SENDER = os.getenv("GMAIL_SENDER_EMAIL")  # e.g. your personal email
+SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "")
+GMAIL_SENDER = os.getenv("GMAIL_SENDER_EMAIL")
 
 
-def _get_credentials(scopes: list[str]):
-    if not os.path.exists(SERVICE_ACCOUNT_FILE):
+def _get_credentials(scopes: List[str]):
+    if not SERVICE_ACCOUNT_FILE or not os.path.exists(SERVICE_ACCOUNT_FILE):
         raise RuntimeError(
-            f"Service account file '{SERVICE_ACCOUNT_FILE}' not found. "
-            "Set GOOGLE_SERVICE_ACCOUNT_FILE or place it in project root."
+            "Service account file not found. "
+            "Set GOOGLE_SERVICE_ACCOUNT_FILE to your .json key file."
         )
     return service_account.Credentials.from_service_account_file(
         SERVICE_ACCOUNT_FILE, scopes=scopes
@@ -35,13 +47,14 @@ def get_gmail_service():
 
 
 def create_or_replace_sheet(
-    title: str, header: list[str], rows: list[list[str]]
+    title: str, header: List[str], rows: List[List[str]]
 ) -> Dict[str, Any]:
     """
-    Create a new spreadsheet and fill it with header + rows.
-    Returns dict with spreadsheetId and spreadsheetUrl.
+    Create a new spreadsheet named `title` and fill it with header + rows.
+    Returns {spreadsheetId, spreadsheetUrl}.
     """
     service = get_sheets_service()
+
     spreadsheet_body = {"properties": {"title": title}}
 
     sheet = (
@@ -58,7 +71,8 @@ def create_or_replace_sheet(
 
     body = {"valueInputOption": "RAW", "data": [data]}
     service.spreadsheets().values().batchUpdate(
-        spreadsheetId=sheet["spreadsheetId"], body=body
+        spreadsheetId=sheet["spreadsheetId"],
+        body=body,
     ).execute()
 
     return {
@@ -76,6 +90,7 @@ def send_email_with_sheet_link(
     from email.mime.text import MIMEText
     import base64
 
+    # If sender not set, just send as `me` (the service account / delegated user)
     sender = GMAIL_SENDER or to_email
 
     body_text = f"{message}\n\nGoogle Sheet link: {sheet_url}"
@@ -85,6 +100,7 @@ def send_email_with_sheet_link(
     mime_msg["subject"] = subject
 
     raw = base64.urlsafe_b64encode(mime_msg.as_bytes()).decode("utf-8")
+
     gmail = get_gmail_service()
     gmail.users().messages().send(userId="me", body={"raw": raw}).execute()
 
