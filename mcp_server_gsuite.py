@@ -1,44 +1,15 @@
-# mcp_server_gsuite.py
 import sys
 from typing import List
 
 from mcp.server.fastmcp import FastMCP
-from pydantic import BaseModel
 
 from gsuite_clients import create_or_replace_sheet, send_email_with_sheet_link
-
-# === Pydantic models ===
-
-class CreateSheetInput(BaseModel):
-    """
-    Generic sheet creation for F1 standings:
-    - title: Spreadsheet title in Google Drive
-    - header: list of column names
-    - rows: list of row values (strings only)
-    """
-    title: str
-    header: List[str]
-    rows: List[List[str]]
-
-
-class CreateSheetOutput(BaseModel):
-    spreadsheet_id: str
-    spreadsheet_url: str
-
-
-class SendEmailInput(BaseModel):
-    """
-    Send an email that contains a Google Sheet link.
-    """
-    to_email: str
-    subject: str
-    sheet_url: str
-    message: str
-
-
-class SendEmailOutput(BaseModel):
-    status: str
-
+from models import (
+    CreateSheetInput,
+    CreateSheetOutput,
+    SendEmailInput,
+    SendEmailOutput,
+)
 
 # === MCP server ===
 
@@ -51,11 +22,9 @@ def create_sheet(input: CreateSheetInput) -> CreateSheetOutput:
     Create a Google Sheet and populate it with header + rows.
 
     Typical F1 usage:
-    - Use this after you have parsed current F1 driver standings
-      into rows like:
-      [["Max Verstappen", "Red Bull", "255"],
-       ["Lando Norris", "McLaren", "210"],
-       ...]
+    - title: "F1 Standings 2025"
+    - header: ["Position", "Driver", "Team", "Points"]
+    - rows:  [["1", "Max Verstappen", "Red Bull", "255"], ...]
     """
     result = create_or_replace_sheet(
         title=input.title, header=input.header, rows=input.rows
@@ -69,11 +38,11 @@ def create_sheet(input: CreateSheetInput) -> CreateSheetOutput:
 @mcp.tool()
 def send_sheet_link_email(input: SendEmailInput) -> SendEmailOutput:
     """
-    Send yourself an email containing the given Google Sheet link.
+    Send an email with the Google Sheet link.
 
     The agent should:
-    - call create_sheet() first
-    - then call this tool with the returned spreadsheet_url.
+    1) call create_sheet()
+    2) then call send_sheet_link_email() with the returned spreadsheet_url.
     """
     status = send_email_with_sheet_link(
         to_email=input.to_email,
@@ -87,7 +56,7 @@ def send_sheet_link_email(input: SendEmailInput) -> SendEmailOutput:
 # === Entry point: stdio vs SSE ===
 
 if __name__ == "__main__":
-    # Default: stdio (used by your Python agent)
+    # Default: stdio (used by Python agent)
     if len(sys.argv) == 1:
         print("mcp_server_gsuite.py starting in stdio mode")
         mcp.run(transport="stdio")
