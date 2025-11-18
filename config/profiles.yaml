@@ -31,13 +31,13 @@ servers:
   - name: documents
     script: mcp_server_2.py
     cwd: mcp_server_2.py
-  - name: websearch
+  - name: websearch # Web Search integration server
     script: mcp_server_3.py
     cwd: mcp_server_3.py
-  - name: gsuite
+  - name: gsuite # GSuite / Google Workspace integration server
     script: mcp_server_gsuite.py
     cwd: mcp_server_gsuite.py
-  - name: telegram
+  - name: telegram # telegram integration server
     script: mcp_server_telegram.py
     cwd: mcp_server_telegram.py
 
