@@ -1,4 +1,3 @@
-# gsuite_clients.py
 """
 Helpers for Google Sheets + Gmail.
 
