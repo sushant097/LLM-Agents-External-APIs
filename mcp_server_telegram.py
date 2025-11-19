@@ -1,4 +1,3 @@
-# mcp_server_telegram.py
 import os
 import sys
 from typing import Optional
