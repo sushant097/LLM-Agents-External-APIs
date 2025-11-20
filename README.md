@@ -117,6 +117,7 @@ LLM-Agents-External-APIs/
 ├── mcp_server_3.py         # Web search / HTML extraction server
 ├── sse_server_gsuite.py    # SSE server for Gmail + Sheets (HTTP)
 └── pyproject.toml          # Dependencies and project metadata
+...
 ```
 
 ---
