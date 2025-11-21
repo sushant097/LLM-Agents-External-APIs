@@ -159,7 +159,7 @@ python sse_server_gsuite.py
 python agent.py
 ```
 
-Then enter any query — the agent will autonomously decide which tool to use.
+Then enter any query — the agent will autonomously decide which tool to use. Code is commented for better understanding.
 
 ---
 
@@ -190,5 +190,3 @@ All components can run locally:
 * Local FAISS database
 * Ollama-based LLMs
 * No data sent externally unless APIs are explicitly configured
-
----
