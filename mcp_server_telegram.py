@@ -8,6 +8,7 @@ import requests
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
+# Need to check at runtime to allow for dynamic env var setting
 if not TELEGRAM_BOT_TOKEN:
     print("[telegram] WARNING: TELEGRAM_BOT_TOKEN is not set. Tools will fail.", file=sys.stderr)
 
