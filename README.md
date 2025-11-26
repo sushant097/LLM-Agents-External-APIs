@@ -444,19 +444,12 @@ You can extend this framework by:
 * Adding new MCP servers:
 
   * Example: Slack, Notion, Jira, local file system
+  
 * Enhancing planning:
 
   * Different strategies based on profile
-* Using SSE for one of the MCP servers:
 
   * Streaming partial results
   * Live progress updates to the agent
-
-At this point, the core pieces of the assignment are in place:
-
-* Telegram message → agent query
-* Agent → web search + parsing
-* Agent → Google Sheet creation
-* Agent → Gmail with sheet link
 
 All wired through MCP tools and the Cortex-R style loop.
