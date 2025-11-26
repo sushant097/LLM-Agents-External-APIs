@@ -11,6 +11,18 @@ using the **Model Context Protocol (MCP)** to call tools over `stdio` (and later
 
 ---
 
+## 🎥 Demo Video
+
+See the full end-to-end flow (Telegram → Web Search → Google Sheets → Gmail) in action:
+
+[![Project Demo – LLM Agents with External APIs & RAG](https://img.youtube.com/vi/Z28oNSfjWuw/0.jpg)](https://youtu.be/Z28oNSfjWuw)
+
+
+See the simple project basic search demo here:
+
+[![Project Basic Demo – LLM Agents with External APIs & RAG](https://img.youtube.com/vi/s0GmFwMDZ50/0.jpg)](https://youtu.be/s0GmFwMDZ50)
+---
+
 ## 🚀 What this project can do right now
 
 You can run a full end-to-end task starting from **Telegram** or the **CLI**:
