@@ -6,10 +6,14 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 import requests
 
+from dotenv import load_dotenv
+load_dotenv()
+
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 # Need to check at runtime to allow for dynamic env var setting
 if not TELEGRAM_BOT_TOKEN:
+    # IMPORTANT: log to stderr, not stdout
     print("[telegram] WARNING: TELEGRAM_BOT_TOKEN is not set. Tools will fail.", file=sys.stderr)
 
 TELEGRAM_API_BASE = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}" if TELEGRAM_BOT_TOKEN else ""
@@ -69,9 +73,24 @@ def send_telegram_message(input: SendTelegramMessageInput) -> SendTelegramMessag
 
 
 if __name__ == "__main__":
-    print("mcp_server_telegram.py starting (stdio)")
-    if len(sys.argv) > 1 and sys.argv[1] == "dev":
-        mcp.run()  # dev mode
+    """
+    Run modes:
+      - python mcp_server_telegram.py            -> stdio MCP server
+      - python mcp_server_telegram.py dev        -> dev stdio
+      - python mcp_server_telegram.py sse        -> SSE MCP server (HTTP)
+    """
+    mode = sys.argv[1] if len(sys.argv) > 1 else "stdio"
+
+    if mode == "sse":
+        # SSE mode: run HTTP MCP server with Server-Sent Events
+        host = os.getenv("TELEGRAM_MCP_HOST", "127.0.0.1")
+        port = int(os.getenv("TELEGRAM_MCP_PORT", "8765"))
+        # DO NOT print to stdout here; stdout is used for HTTP responses
+        print(f"[telegram] Starting SSE MCP server on {host}:{port}", file=sys.stderr)
+        mcp.run(transport="sse", host=host, port=port)
+    elif mode == "dev":
+        # dev stdio mode (for debugging with MCP inspector etc.)
+        mcp.run()
     else:
+        # default: stdio MCP for your current agent setup
         mcp.run(transport="stdio")
-        print("\nShutting down...")
