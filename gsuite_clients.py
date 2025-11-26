@@ -1,22 +1,25 @@
 # gsuite_clients.py
 """
-Helpers for Google Sheets + Gmail using USER OAuth for Sheets and SMTP for Gmail.
+Helpers for Google Sheets + Gmail using USER OAuth (installed app).
 
-Sheets:
-  - Uses OAuth "installed app" flow once in browser.
-  - Stores a token in token_sheets.json in the project root.
+First run:
+  - Opens a browser for you to log in and grant access.
+  - Saves token_gsuite.json in the project root.
 
-Gmail:
-  - Uses SMTP with an App Password.
+Subsequent runs:
+  - Reuse token_gsuite.json (refreshing automatically when needed).
 
-Required env vars:
+APIs & Scopes:
+  - Google Sheets: create + update spreadsheets
+  - Gmail: send email (gmail.send)
 
-  GOOGLE_OAUTH_CLIENT_SECRET_FILE=/absolute/path/to/oauth_client_secret.json
-  GMAIL_SENDER_EMAIL=you@gmail.com
-  GMAIL_APP_PASSWORD=16_char_app_password
+Required:
+  - credentials.json in project root or GOOGLE_OAUTH_CLIENT_SECRET_FILE env var.
+  - Sheets API + Gmail API enabled in your Google Cloud project.
 """
 
 import os
+import sys
 from typing import Any, Dict, List
 
 from googleapiclient.discovery import build
@@ -24,51 +27,69 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-# -------------------- Sheets via USER OAuth --------------------
+import base64
+from email.mime.text import MIMEText
+from dotenv import load_dotenv
 
-SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-OAUTH_CLIENT_SECRET_FILE = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET_FILE", "")
-TOKEN_FILE = "token_sheets.json"
+load_dotenv()
+
+# Combined scopes for Sheets + Gmail send
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/gmail.send",
+]
+
+# Where to find the OAuth client secret
+OAUTH_CLIENT_SECRET_FILE = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET_FILE", "gcp-secret.json")
+print(f"[gsuite_clients] Using OAuth client file: {OAUTH_CLIENT_SECRET_FILE}", file=sys.stderr)
 
 
-def _get_sheets_credentials() -> Credentials:
+# Where to store the user token
+TOKEN_FILE = "token_gsuite.json"
+
+
+def _get_credentials() -> Credentials:
     """
-    Get user credentials for Google Sheets:
-    - If token_sheets.json exists, load it.
-    - Else run browser OAuth flow once and save token_sheets.json.
+    Get user credentials for Sheets + Gmail.
+    - If token_gsuite.json exists, load it.
+    - Else run browser OAuth flow once and save token_gsuite.json.
     """
     creds: Credentials | None = None
 
+    # 1) Try existing token
     if os.path.exists(TOKEN_FILE):
-        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SHEETS_SCOPES)
+        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
 
-    # If there are no valid credentials, let user log in
+    # 2) If no valid creds, refresh or run OAuth flow
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            # Try to refresh silently
+            # refresh silently
             creds.refresh(Request())
         else:
-            if not OAUTH_CLIENT_SECRET_FILE or not os.path.exists(OAUTH_CLIENT_SECRET_FILE):
-                raise RuntimeError(
-                    "OAuth client secret file not found. "
-                    "Set GOOGLE_OAUTH_CLIENT_SECRET_FILE to your OAuth client JSON."
+            # run user consent flow
+            if not os.path.exists(OAUTH_CLIENT_SECRET_FILE):
+                raise FileNotFoundError(
+                    f"Missing OAuth client file: {OAUTH_CLIENT_SECRET_FILE}. "
+                    "Download it from Google Cloud Console (OAuth Client for Desktop App)."
                 )
             flow = InstalledAppFlow.from_client_secrets_file(
-                OAUTH_CLIENT_SECRET_FILE, SHEETS_SCOPES
+                OAUTH_CLIENT_SECRET_FILE, SCOPES
             )
-            # This will open a browser the first time
             creds = flow.run_local_server(port=0)
 
-        # Save the credentials for the next run
+        # Save token for next time
         with open(TOKEN_FILE, "w", encoding="utf-8") as token:
             token.write(creds.to_json())
 
     return creds
 
 
+# -------------------- Sheets helpers --------------------
+
 def get_sheets_service():
-    creds = _get_sheets_credentials()
-    return build("sheets", "v4", credentials=creds)
+    creds = _get_credentials()
+    # cache_discovery=False to avoid noisy warnings
+    return build("sheets", "v4", credentials=creds, cache_discovery=False)
 
 
 def create_or_replace_sheet(
@@ -78,7 +99,8 @@ def create_or_replace_sheet(
     Create a new spreadsheet named `title` and fill it with header + rows.
     Returns {spreadsheetId, spreadsheetUrl}.
     """
-    print(f"DEBUG: creating spreadsheet with title: {title}")
+    print(f"[gsuite_clients] Creating spreadsheet with title: {title}", file=sys.stderr)
+
     service = get_sheets_service()
 
     spreadsheet_body = {"properties": {"title": title}}
@@ -104,35 +126,35 @@ def create_or_replace_sheet(
     }
 
 
-# -------------------- Gmail via SMTP + App Password --------------------
+# -------------------- Gmail helpers --------------------
 
-import smtplib
-from email.mime.text import MIMEText
-
-GMAIL_SENDER = os.getenv("GMAIL_SENDER_EMAIL")
-GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
+def get_gmail_service():
+    creds = _get_credentials()
+    return build("gmail", "v1", credentials=creds, cache_discovery=False)
 
 
 def send_email_with_sheet_link(
-    to_email: str, subject: str, sheet_url: str, message: str
+    to_email: str,
+    subject: str,
+    sheet_url: str,
+    message: str,
 ) -> str:
     """
-    Send an email that contains the given sheet URL using Gmail SMTP.
+    Send an email via Gmail API that contains the given sheet URL.
+    The 'from' user will be the Gmail account you authorized in the OAuth flow.
     """
-    if not (GMAIL_SENDER and GMAIL_APP_PASSWORD):
-        raise RuntimeError(
-            "GMAIL_SENDER_EMAIL and/or GMAIL_APP_PASSWORD not set in environment."
-        )
+    full_body = f"{message}\n\nGoogle Sheet link: {sheet_url}"
+    mime_msg = MIMEText(full_body, "plain", "utf-8")
+    mime_msg["to"] = to_email
+    mime_msg["subject"] = subject
 
-    body_text = f"{message}\n\nGoogle Sheet link: {sheet_url}"
-    msg = MIMEText(body_text, "plain", "utf-8")
-    msg["Subject"] = subject
-    msg["From"] = GMAIL_SENDER
-    msg["To"] = to_email
+    raw = base64.urlsafe_b64encode(mime_msg.as_bytes()).decode("utf-8")
 
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
-        server.starttls()
-        server.login(GMAIL_SENDER, GMAIL_APP_PASSWORD)
-        server.send_message(msg)
+    service = get_gmail_service()
+    sent = service.users().messages().send(
+        userId="me",
+        body={"raw": raw},
+    ).execute()
 
-    return f"Email sent to {to_email} with link {sheet_url}"
+    msg_id = sent.get("id", "")
+    return f"Email sent to {to_email} (message id: {msg_id})"
