@@ -16,8 +16,11 @@ using the **Model Context Protocol (MCP)** to call tools over `stdio` (and later
 You can run a full end-to-end task starting from **Telegram** or the **CLI**:
 
 > **“Find current F1 driver standings → create a Google Sheet → email me the sheet link.”**
+
 Or any other query like:
+
 > **List 5 popular movies -> create a Google Sheet -> email me the sheet link.**
+
 Or Whatever you want. 
 
 ### End-to-end flow (concept)
