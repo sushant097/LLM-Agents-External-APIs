@@ -52,36 +52,3 @@ class ChunkListOutput(BaseModel):
 class ShellCommandInput(BaseModel):
     command: str
 
-
-
-# ==== Pydantic models for GSuite tools ====
-class CreateSheetInput(BaseModel):
-    """
-    Generic sheet creation for F1 standings:
-    - title: Spreadsheet title in Google Drive
-    - header: list of column names
-    - rows: list of row values (strings only)
-    """
-    title: str
-    header: List[str]
-    rows: List[List[str]]
-
-
-class CreateSheetOutput(BaseModel):
-    spreadsheet_id: str
-    spreadsheet_url: str
-
-
-class SendEmailInput(BaseModel):
-    """
-    Send an email that contains a Google Sheet link.
-    """
-    to_email: str
-    subject: str
-    sheet_url: str
-    message: str
-
-
-class SendEmailOutput(BaseModel):
-    status: str
-# ==== End of GSuite models ====
