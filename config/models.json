@@ -29,9 +29,13 @@
       }
     },
     "nomic": {
-      "type": "huggingface",
-      "model": "nomic-ai/nomic-embed-text-v1",
-      "embedding_dimension": 768
+    "type": "ollama",
+    "model": "nomic-embed-text",
+    "embedding_model": "nomic-embed-text",
+    "url": {
+      "generate": "http://localhost:11434/api/generate",
+      "embed": "http://localhost:11434/api/embeddings"
     }
+  }
   }
 }

@@ -1,0 +1,14 @@
+Ollama check: 
+curl http://localhost:11434/api/version => should give version as output
+ollama list => give list of models available. 
+Install embedding model as:
+ollama pull nomic-embed-text
+
+Test Embedding model: 
+curl http://localhost:11434/api/embeddings \
+  -d '{ "model": "nomic-embed-text", "prompt": "Hello world" }'
+
+
+Install phi4 and gemma3:12b models: 
+ollama pull phi4
+ollama pull gemma3:12b

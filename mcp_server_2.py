@@ -30,7 +30,7 @@ mcp = FastMCP("Calculator")
 EMBED_URL = "http://localhost:11434/api/embeddings"
 OLLAMA_CHAT_URL = "http://localhost:11434/api/chat"
 OLLAMA_URL = "http://localhost:11434/api/generate"
-EMBED_MODEL = "nomic-embed-text"
+EMBED_MODEL = "nomic-embed-text:latest"
 GEMMA_MODEL = "gemma3:12b"
 PHI_MODEL = "phi4:latest"
 CHUNK_SIZE = 256
@@ -41,9 +41,30 @@ ROOT = Path(__file__).parent.resolve()
 
 
 def get_embedding(text: str) -> np.ndarray:
-    response = requests.post(EMBED_URL, json={"model": EMBED_MODEL, "prompt": text})
-    response.raise_for_status()
-    return np.array(response.json()["embedding"], dtype=np.float32)
+    response = requests.post(
+        EMBED_URL,
+        json={
+            "model": EMBED_MODEL,
+            "input": text,  # ← use "input" for /api/embed
+        },
+        timeout=60,
+    )
+
+    if not response.ok:
+        raise RuntimeError(
+            f"Ollama embedding error: {response.status_code} {response.text}"
+        )
+
+    data = response.json()
+
+    if "embedding" in data:
+        emb = data["embedding"]
+    elif "embeddings" in data:
+        emb = data["embeddings"][0]
+    else:
+        raise RuntimeError(f"Unexpected embedding response: {data}")
+
+    return np.array(emb, dtype=np.float32)
 
 def chunk_text(text, size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     words = text.split()

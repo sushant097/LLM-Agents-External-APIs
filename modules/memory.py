@@ -48,12 +48,38 @@ class MemoryManager:
         self.embeddings: List[np.ndarray] = []
 
     def _get_embedding(self, text: str) -> np.ndarray:
-        response = requests.post(
-            self.embedding_model_url,
-            json={"model": self.model_name, "prompt": text}
-        )
-        response.raise_for_status()
-        return np.array(response.json()["embedding"], dtype=np.float32)
+        try:
+            response = requests.post(
+                self.embedding_model_url,
+                json={
+                    "model": self.model_name,
+                    # Ollama embeddings prefers "input" for /api/embed
+                    "input": text,
+                },
+                timeout=60,
+            )
+            # If Ollama returns 500, include its body for debugging
+            if not response.ok:
+                raise RuntimeError(
+                    f"Embedding request failed: {response.status_code} {response.text}"
+                )
+
+            data = response.json()
+
+            # Some wrappers use "embedding", some "embeddings"
+            if "embedding" in data:
+                emb = data["embedding"]
+            elif "embeddings" in data:
+                emb = data["embeddings"][0]
+            else:
+                raise RuntimeError(f"Unexpected embedding response: {data}")
+
+            return np.array(emb, dtype=np.float32)
+
+        except Exception as e:
+            print(f"[memory] Embedding error: {e}")
+            # Re-raise so the agent sees it, but now you’ll have a clear log
+            raise
 
     def add(self, item: MemoryItem):
         embedding = self._get_embedding(item.text)

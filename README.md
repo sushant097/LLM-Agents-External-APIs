@@ -19,9 +19,8 @@ You can run a full end-to-end task starting from **Telegram** or the **CLI**:
 
 Or any other query like:
 
-> **List 5 popular movies -> create a Google Sheet -> email me the sheet link.**
+> `Find the latest news about Tesla and create a Google Sheet summarizing the top 5 articles with their titles and URLs. Email me the sheet link.`
 
-Or Whatever you want. 
 
 ### End-to-end flow (concept)
 
@@ -237,6 +236,7 @@ LLM-Agents-External-APIs/
 ├── mcp_server_3.py           # Web search + fetch MCP server
 ├── mcp_server_gsuite.py      # GSuite MCP server (Sheets + Gmail via OAuth)
 ├── mcp_server_telegram.py    # Telegram MCP server (optional / WIP)
+├── telegram_gateway.py       # Telegram bot → Agent bridge (entrypoint)
 │
 ├── gsuite_clients.py         # Shared Google Sheets + Gmail client (OAuth)
 ├── debug_gsuite_direct.py    # Direct test harness for gsuite_clients.py
